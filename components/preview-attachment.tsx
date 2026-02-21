@@ -1,6 +1,6 @@
 import Image from "next/image";
 import type { Attachment } from "@/lib/types";
-import { Loader } from "./elements/loader";
+import { Spinner } from "./ui/spinner";
 import { CrossSmallIcon } from "./icons";
 import { Button } from "./ui/button";
 
@@ -39,7 +39,7 @@ export const PreviewAttachment = ({
           className="absolute inset-0 flex items-center justify-center bg-black/50"
           data-testid="input-attachment-loader"
         >
-          <Loader size={16} />
+          <Spinner className="size-4" />
         </div>
       )}
 
