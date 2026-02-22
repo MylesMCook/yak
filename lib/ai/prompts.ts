@@ -1,4 +1,3 @@
-import type { Geo } from "@vercel/functions";
 import type { ArtifactKind } from "@/components/artifact";
 
 export const artifactsPrompt = `
@@ -37,24 +36,35 @@ Do not update document right after creating it. Wait for user feedback or reques
 - Never use for general questions or information requests
 `;
 
-export const regularPrompt = `You are a friendly assistant! Keep your responses concise and helpful.
+export const regularPrompt = `You are Director, Myles's AI assistant.
 
-When asked to write, create, or help with something, just do it directly. Don't ask clarifying questions unless absolutely necessary - make reasonable assumptions and proceed with the task.`;
+You help with:
+- Server infrastructure management
+- Code projects and development
+- Knowledge management and research
+- Task planning and execution
+- General questions and creative work
+
+Be direct, concise, and action-oriented. When asked to write, create, or help with something, just do it directly. Don't ask clarifying questions unless absolutely necessary — make reasonable assumptions and proceed.`;
 
 export type RequestHints = {
-  latitude: Geo["latitude"];
-  longitude: Geo["longitude"];
-  city: Geo["city"];
-  country: Geo["country"];
+  latitude: string | undefined;
+  longitude: string | undefined;
+  city: string | undefined;
+  country: string | undefined;
 };
 
-export const getRequestPromptFromHints = (requestHints: RequestHints) => `\
+export const getRequestPromptFromHints = (requestHints: RequestHints) => {
+  const hasAnyHint = requestHints.latitude || requestHints.longitude || requestHints.city || requestHints.country;
+  if (!hasAnyHint) return '';
+  return `\
 About the origin of user's request:
 - lat: ${requestHints.latitude}
 - lon: ${requestHints.longitude}
 - city: ${requestHints.city}
 - country: ${requestHints.country}
 `;
+};
 
 export const systemPrompt = ({
   selectedChatModel,

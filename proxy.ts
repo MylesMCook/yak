@@ -24,10 +24,12 @@ export async function proxy(request: NextRequest) {
   });
 
   if (!token) {
-    const redirectUrl = encodeURIComponent(request.url);
+    if (pathname === "/login" || pathname === "/register") {
+      return NextResponse.next();
+    }
 
     return NextResponse.redirect(
-      new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url)
+      new URL("/login", request.url)
     );
   }
 

@@ -1,0 +1,47 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: omp-chat
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3003:3000"
+    environment:
+      - AI_PROXY_URL=http://cli-proxy-api:8317/v1
+      - AI_PROXY_KEY=${AI_PROXY_KEY}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - POSTGRES_URL=postgresql://ompchat:${POSTGRES_PASSWORD}@db:5432/ompchat
+      - AUTH_TRUST_HOST=true
+      - AUTH_URL=https://chat.funnydomainname.com
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - chat-net
+
+  db:
+    image: postgres:16-alpine
+    container_name: omp-chat-db
+    restart: unless-stopped
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=ompchat
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=ompchat
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ompchat"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - chat-net
+
+volumes:
+  pgdata:
+
+networks:
+  chat-net:
+    external: true
+    name: omp-chat-network
