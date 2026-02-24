@@ -1,6 +1,11 @@
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 export const Greeting = () => {
+  const prefersReducedMotion = useReducedMotion();
+  const reducedMotionTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : undefined;
+
   return (
     <div
       className="mx-auto mt-4 flex size-full max-w-3xl flex-col justify-center px-4 md:mt-16 md:px-8"
@@ -11,7 +16,7 @@ export const Greeting = () => {
         className="font-semibold text-xl md:text-2xl"
         exit={{ opacity: 0, y: 10 }}
         initial={{ opacity: 0, y: 10 }}
-        transition={{ delay: 0.5 }}
+        transition={reducedMotionTransition ?? { delay: 0.5 }}
       >
         Hello there!
       </motion.div>
@@ -20,7 +25,7 @@ export const Greeting = () => {
         className="text-xl text-zinc-500 md:text-2xl"
         exit={{ opacity: 0, y: 10 }}
         initial={{ opacity: 0, y: 10 }}
-        transition={{ delay: 0.6 }}
+        transition={reducedMotionTransition ?? { delay: 0.6 }}
       >
         How can I help you today?
       </motion.div>

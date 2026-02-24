@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDownIcon, PaperclipIcon } from "lucide-react";
+import NextImage from "next/image";
 import type { ComponentProps } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -149,15 +150,16 @@ export type QueueItemImageProps = ComponentProps<"img">;
 
 export const QueueItemImage = ({
   className,
+  src,
   ...props
 }: QueueItemImageProps) => (
-  // biome-ignore lint/performance/noImgElement: dynamic blob/data URLs require native img
-  <img
+  <NextImage
     alt=""
     className={cn("h-8 w-8 rounded border object-cover", className)}
     height={32}
+    src={src ?? ""}
+    unoptimized
     width={32}
-    {...props}
   />
 );
 

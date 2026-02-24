@@ -55,8 +55,14 @@ export type RequestHints = {
 };
 
 export const getRequestPromptFromHints = (requestHints: RequestHints) => {
-  const hasAnyHint = requestHints.latitude || requestHints.longitude || requestHints.city || requestHints.country;
-  if (!hasAnyHint) return '';
+  const hasAnyHint =
+    requestHints.latitude ||
+    requestHints.longitude ||
+    requestHints.city ||
+    requestHints.country;
+  if (!hasAnyHint) {
+    return "";
+  }
   return `\
 About the origin of user's request:
 - lat: ${requestHints.latitude}
@@ -69,21 +75,26 @@ About the origin of user's request:
 export const systemPrompt = ({
   selectedChatModel,
   requestHints,
+  memoryContext,
 }: {
   selectedChatModel: string;
   requestHints: RequestHints;
+  memoryContext?: string;
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
+  const memoryBlock = memoryContext
+    ? `\n\n## Your Memory\n${memoryContext}`
+    : "";
 
   // reasoning models don't need artifacts prompt (they can't use tools)
   if (
     selectedChatModel.includes("reasoning") ||
     selectedChatModel.includes("thinking")
   ) {
-    return `${regularPrompt}\n\n${requestPrompt}`;
+    return `${regularPrompt}${memoryBlock}\n\n${requestPrompt}`;
   }
 
-  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+  return `${regularPrompt}${memoryBlock}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
 };
 
 export const codePrompt = `

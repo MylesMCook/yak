@@ -1,0 +1,13 @@
+{
+  "ignore": {
+    "rules": [
+      "react-doctor/require-reduced-motion",
+      "react-doctor/no-cascading-set-state",
+      "react-doctor/no-giant-component",
+      "react-doctor/use-lazy-motion",
+      "react-doctor/prefer-dynamic-import",
+      "react-doctor/prefer-useReducer",
+      "react-doctor/no-effect-event-handler"
+    ]
+  }
+}

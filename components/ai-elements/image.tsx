@@ -1,4 +1,5 @@
 import type { Experimental_GeneratedImage } from "ai";
+import NextImage from "next/image";
 import { cn } from "@/lib/utils";
 
 export type ImageProps = Experimental_GeneratedImage & {
@@ -12,14 +13,17 @@ export const Image = ({
   mediaType,
   ...props
 }: ImageProps) => (
-  // biome-ignore lint/performance/noImgElement: base64 data URLs require native img
-  <img
+  <NextImage
     {...props}
-    alt={props.alt}
+    alt={props.alt ?? ""}
     className={cn(
       "h-auto max-w-full overflow-hidden rounded-md",
       props.className
     )}
+    height={768}
+    loading="lazy"
     src={`data:${mediaType};base64,${base64}`}
+    unoptimized
+    width={1024}
   />
 );

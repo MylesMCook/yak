@@ -1,9 +1,15 @@
 import { cookies } from "next/headers";
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Chat } from "@/components/chat";
 import { DataStreamHandler } from "@/components/data-stream-handler";
 import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
 import { generateUUID } from "@/lib/utils";
+
+export const metadata: Metadata = {
+  title: "New Chat",
+  description: "Start a new conversation.",
+};
 
 export default function Page() {
   return (

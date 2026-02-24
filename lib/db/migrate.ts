@@ -1,33 +1,40 @@
+import { existsSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import Database from "better-sqlite3";
 import { config } from "dotenv";
-import { drizzle } from "drizzle-orm/postgres-js";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
-import postgres from "postgres";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 
 config({
   path: ".env.local",
 });
 
-const runMigrate = async () => {
-  if (!process.env.POSTGRES_URL) {
-    console.log("⏭️  POSTGRES_URL not defined, skipping migrations");
-    process.exit(0);
+const dbPath = process.env.DATABASE_PATH ?? "./data/pi-chat.sqlite";
+
+const runMigrate = () => {
+  const dir = dirname(dbPath);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
   }
 
-  const connection = postgres(process.env.POSTGRES_URL, { max: 1 });
-  const db = drizzle(connection);
+  const sqlite = new Database(dbPath);
+  sqlite.pragma("journal_mode = WAL");
+  sqlite.pragma("busy_timeout = 5000");
+  const db = drizzle(sqlite);
 
-  console.log("⏳ Running migrations...");
-
+  console.log("Running SQLite migrations...");
   const start = Date.now();
-  await migrate(db, { migrationsFolder: "./lib/db/migrations" });
+  migrate(db, { migrationsFolder: "./lib/db/migrations-sqlite" });
+  sqlite.close();
   const end = Date.now();
-
-  console.log("✅ Migrations completed in", end - start, "ms");
+  console.log("Migrations completed in", end - start, "ms");
   process.exit(0);
 };
 
-runMigrate().catch((err) => {
-  console.error("❌ Migration failed");
+try {
+  runMigrate();
+} catch (err) {
+  console.error("Migration failed");
   console.error(err);
   process.exit(1);
-});
+}

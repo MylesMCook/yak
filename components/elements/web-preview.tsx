@@ -2,7 +2,7 @@
 
 import { ChevronDownIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -26,6 +26,7 @@ export type WebPreviewContextValue = {
 };
 
 const WebPreviewContext = createContext<WebPreviewContextValue | null>(null);
+const EMPTY_LOGS: WebPreviewConsoleProps["logs"] = [];
 
 const useWebPreview = () => {
   const context = useContext(WebPreviewContext);
@@ -47,7 +48,8 @@ export const WebPreview = ({
   onUrlChange,
   ...props
 }: WebPreviewProps) => {
-  const [url, setUrl] = useState(defaultUrl);
+  const initialUrlRef = useRef(defaultUrl);
+  const [url, setUrl] = useState(initialUrlRef.current);
   const [consoleOpen, setConsoleOpen] = useState(false);
 
   const handleUrlChange = (newUrl: string) => {
@@ -190,7 +192,7 @@ export type WebPreviewConsoleProps = ComponentProps<"div"> & {
 
 export const WebPreviewConsole = ({
   className,
-  logs = [],
+  logs = EMPTY_LOGS,
   children,
   ...props
 }: WebPreviewConsoleProps) => {
@@ -227,7 +229,7 @@ export const WebPreviewConsole = ({
           {logs.length === 0 ? (
             <p className="text-muted-foreground">No console output</p>
           ) : (
-            logs.map((log, index) => (
+            logs.map((log) => (
               <div
                 className={cn(
                   "text-xs",
@@ -235,7 +237,7 @@ export const WebPreviewConsole = ({
                   log.level === "warn" && "text-yellow-600",
                   log.level === "log" && "text-foreground"
                 )}
-                key={`${log.timestamp.getTime()}-${index}`}
+                key={`${log.timestamp.getTime()}-${log.level}-${log.message}`}
               >
                 <span className="text-muted-foreground">
                   {log.timestamp.toLocaleTimeString()}

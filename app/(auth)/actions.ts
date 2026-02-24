@@ -1,5 +1,6 @@
 "use server";
 
+import { AuthError } from "next-auth";
 import { z } from "zod";
 
 import { createUser, getUser } from "@/lib/db/queries";
@@ -12,7 +13,13 @@ const authFormSchema = z.object({
 });
 
 export type LoginActionState = {
-  status: "idle" | "in_progress" | "success" | "failed" | "invalid_data";
+  status:
+    | "idle"
+    | "in_progress"
+    | "success"
+    | "failed"
+    | "invalid_data"
+    | "error";
 };
 
 export const login = async (
@@ -28,7 +35,7 @@ export const login = async (
     await signIn("credentials", {
       email: validatedData.email,
       password: validatedData.password,
-      redirect: false,
+      redirectTo: "/",
     });
 
     return { status: "success" };
@@ -36,8 +43,13 @@ export const login = async (
     if (error instanceof z.ZodError) {
       return { status: "invalid_data" };
     }
-
-    return { status: "failed" };
+    if (error instanceof AuthError) {
+      if (error.type === "CredentialsSignin") {
+        return { status: "failed" };
+      }
+      return { status: "error" };
+    }
+    throw error; // Re-throw non-auth errors (e.g. NEXT_REDIRECT on success)
   }
 };
 

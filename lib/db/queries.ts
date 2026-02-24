@@ -1,5 +1,6 @@
 import "server-only";
 
+import Database from "better-sqlite3";
 import {
   and,
   asc,
@@ -9,20 +10,28 @@ import {
   gt,
   gte,
   inArray,
+  isNull,
   lt,
+  sql,
   type SQL,
 } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { drizzle } from "drizzle-orm/better-sqlite3";
 import type { ArtifactKind } from "@/components/artifact";
 import type { VisibilityType } from "@/components/visibility-selector";
 import { OpenChatError } from "../errors";
 import { generateUUID } from "../utils";
 import {
+  agentTasks,
+  type AgentTask,
   type Chat,
   chat,
   type DBMessage,
+  distilledMemory,
+  type DistilledMemory,
   document,
+  memorySummary,
+  type MemorySummary,
+  memorySummaryVersions,
   message,
   type Suggestion,
   stream,
@@ -33,13 +42,11 @@ import {
 } from "./schema";
 import { generateHashedPassword } from "./utils";
 
-// Optionally, if not using email/pass login, you can
-// use the Drizzle adapter for Auth.js / NextAuth
-// https://authjs.dev/reference/adapter/drizzle
-
-// biome-ignore lint: Forbidden non-null assertion.
-const client = postgres(process.env.POSTGRES_URL!);
-const db = drizzle(client);
+const dbPath = process.env.DATABASE_PATH ?? "./data/pi-chat.sqlite";
+const sqlite = new Database(dbPath);
+sqlite.pragma("journal_mode = WAL");
+sqlite.pragma("busy_timeout = 5000");
+const db = drizzle(sqlite);
 
 export async function getUser(email: string): Promise<User[]> {
   try {
@@ -97,6 +104,8 @@ export async function saveChat({
       userId,
       title,
       visibility,
+      lastActivityAt: new Date(),
+      messageCount: 0,
     });
   } catch (_error) {
     throw new OpenChatError("bad_request:database", "Failed to save chat");
@@ -552,8 +561,7 @@ export async function getMessageCountByUserId({
           gte(message.createdAt, twentyFourHoursAgo),
           eq(message.role, "user")
         )
-      )
-      .execute();
+      );
 
     return stats?.count ?? 0;
   } catch (_error) {
@@ -589,8 +597,7 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
       .select({ id: stream.id })
       .from(stream)
       .where(eq(stream.chatId, chatId))
-      .orderBy(asc(stream.createdAt))
-      .execute();
+      .orderBy(asc(stream.createdAt));
 
     return streamIds.map(({ id }) => id);
   } catch (_error) {
@@ -599,4 +606,254 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
       "Failed to get stream ids by chat id"
     );
   }
+}
+
+// --- Memory layer queries ---
+
+/** Update lastActivityAt and increment messageCount on a chat */
+export async function touchChat({
+  chatId,
+  addedMessages,
+}: {
+  chatId: string;
+  addedMessages: number;
+}) {
+  try {
+    await db
+      .update(chat)
+      .set({
+        lastActivityAt: new Date(),
+        messageCount: sql`COALESCE(${chat.messageCount}, 0) + ${addedMessages}`,
+      })
+      .where(eq(chat.id, chatId));
+  } catch (_error) {
+    console.warn("Failed to touch chat", chatId, _error);
+  }
+}
+
+/** Mark a chat as finalized (idempotent) */
+export async function finalizeChat({ chatId }: { chatId: string }) {
+  const [existing] = await db
+    .select({ finalizedAt: chat.finalizedAt })
+    .from(chat)
+    .where(eq(chat.id, chatId));
+  if (existing?.finalizedAt) return false; // already finalized
+  await db
+    .update(chat)
+    .set({ finalizedAt: new Date() })
+    .where(eq(chat.id, chatId));
+  return true;
+}
+
+/** Find idle chats that should be finalized */
+export async function getIdleUnfinalizedChats({
+  idleMinutes,
+}: {
+  idleMinutes: number;
+}) {
+  const cutoff = new Date(Date.now() - idleMinutes * 60 * 1000);
+  return db
+    .select({ id: chat.id, userId: chat.userId })
+    .from(chat)
+    .where(and(isNull(chat.finalizedAt), lt(chat.lastActivityAt, cutoff)));
+}
+
+/** Get or create memory summary for a user */
+export async function getMemorySummary({
+  userId,
+}: {
+  userId: string;
+}): Promise<MemorySummary | null> {
+  const [row] = await db
+    .select()
+    .from(memorySummary)
+    .where(eq(memorySummary.userId, userId));
+  return row ?? null;
+}
+
+/** Upsert memory summary, archive old version */
+export async function updateMemorySummary({
+  userId,
+  content,
+}: {
+  userId: string;
+  content: string;
+}) {
+  const existing = await getMemorySummary({ userId });
+  const newVersion = (existing?.version ?? 0) + 1;
+
+  // Archive old version
+  if (existing) {
+    await db.insert(memorySummaryVersions).values({
+      userId,
+      version: existing.version ?? 0,
+      content: existing.content,
+      createdAt: Date.now(),
+    });
+  }
+
+  // Upsert current
+  await db
+    .insert(memorySummary)
+    .values({
+      userId,
+      content,
+      updatedAt: Date.now(),
+      version: newVersion,
+      locked: false,
+    })
+    .onConflictDoUpdate({
+      target: memorySummary.userId,
+      set: {
+        content,
+        updatedAt: Date.now(),
+        version: newVersion,
+        locked: false,
+      },
+    });
+}
+
+/** Get distilled memory entries for a user by tier */
+export async function getDistilledMemory({
+  userId,
+  tier,
+  limit: maxRows = 10,
+}: {
+  userId: string;
+  tier?: number;
+  limit?: number;
+}): Promise<DistilledMemory[]> {
+  const conditions = [eq(distilledMemory.userId, userId)];
+  if (tier !== undefined) {
+    conditions.push(eq(distilledMemory.tier, tier));
+  }
+  return db
+    .select()
+    .from(distilledMemory)
+    .where(and(...conditions))
+    .orderBy(desc(distilledMemory.createdAt))
+    .limit(maxRows);
+}
+
+/** Insert a distilled memory entry */
+export async function insertDistilledMemory(entry: {
+  userId: string;
+  tier: number;
+  content: string;
+  sourceChatIds: string[];
+}) {
+  await db.insert(distilledMemory).values({
+    userId: entry.userId,
+    tier: entry.tier,
+    content: entry.content,
+    sourceChatIds: JSON.stringify(entry.sourceChatIds),
+    createdAt: Date.now(),
+  });
+}
+
+/** Delete distilled memory entries by IDs */
+export async function deleteDistilledMemoryByIds(ids: string[]) {
+  if (ids.length === 0) return;
+  await db.delete(distilledMemory).where(inArray(distilledMemory.id, ids));
+}
+
+/** Get finalized chats older than a cutoff that haven't been distilled yet */
+export async function getFinalizedChatsForDistillation({
+  userId,
+  olderThanMs,
+  existingSourceChatIds,
+}: {
+  userId: string;
+  olderThanMs: number;
+  existingSourceChatIds: string[];
+}) {
+  const cutoff = new Date(Date.now() - olderThanMs);
+  const base = db
+    .select({ id: chat.id })
+    .from(chat)
+    .where(
+      and(
+        eq(chat.userId, userId),
+        lt(chat.finalizedAt, cutoff),
+      ),
+    );
+  const rows = await base;
+  return rows.filter((r) => !existingSourceChatIds.includes(r.id));
+}
+
+/** Get all distinct user IDs that have chats */
+export async function getAllUserIds(): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ userId: chat.userId })
+    .from(chat);
+  return rows.map((r) => r.userId);
+}
+
+/** Get the raw SQLite DB handle (for FTS5 queries) */
+export function getRawDb() {
+  return sqlite;
+}
+
+// --- Agent task queries ---
+
+export async function createAgentTask(task: {
+  userId: string;
+  input: string;
+  linkedChatId?: string;
+}): Promise<string> {
+  const id = crypto.randomUUID();
+  const now = Date.now();
+  await db.insert(agentTasks).values({
+    id,
+    userId: task.userId,
+    status: "queued",
+    createdAt: now,
+    updatedAt: now,
+    input: task.input,
+    linkedChatId: task.linkedChatId ?? null,
+  });
+  return id;
+}
+
+export async function getAgentTask({
+  id,
+}: {
+  id: string;
+}): Promise<AgentTask | null> {
+  const [row] = await db
+    .select()
+    .from(agentTasks)
+    .where(eq(agentTasks.id, id));
+  return row ?? null;
+}
+
+export async function updateAgentTask({
+  id,
+  ...updates
+}: {
+  id: string;
+  status?: string;
+  openhandsTaskId?: string;
+  result?: string;
+  error?: string;
+}) {
+  await db
+    .update(agentTasks)
+    .set({ ...updates, updatedAt: Date.now() })
+    .where(eq(agentTasks.id, id));
+}
+
+export async function getAgentTasksByUserId({
+  userId,
+  limit: maxRows = 50,
+}: {
+  userId: string;
+  limit?: number;
+}): Promise<AgentTask[]> {
+  return db
+    .select()
+    .from(agentTasks)
+    .where(eq(agentTasks.userId, userId))
+    .orderBy(desc(agentTasks.createdAt))
+    .limit(maxRows);
 }

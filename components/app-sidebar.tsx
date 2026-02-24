@@ -7,7 +7,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
-import { PlusIcon, TrashIcon } from "@/components/icons";
+import { BotIcon, PlusIcon, TrashIcon } from "@/components/icons";
 import {
   getChatHistoryPaginationKey,
   SidebarHistory,
@@ -72,10 +72,30 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 }}
               >
                 <span className="cursor-pointer rounded-md px-2 font-semibold text-lg hover:bg-muted">
-                  OpenChat
+                  pi-chat
                 </span>
               </Link>
               <div className="flex flex-row gap-1">
+                {user && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        className="h-8 p-1 md:h-fit md:p-2"
+                        onClick={() => {
+                          setOpenMobile(false);
+                          router.push("/agents");
+                        }}
+                        type="button"
+                        variant="ghost"
+                      >
+                        <BotIcon />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent align="end" className="hidden md:block">
+                      Agent Tasks
+                    </TooltipContent>
+                  </Tooltip>
+                )}
                 {user && (
                   <Tooltip>
                     <TooltipTrigger asChild>

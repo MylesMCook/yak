@@ -1,3 +1,4 @@
+import NextImage from "next/image";
 import {
   type Dispatch,
   type SetStateAction,
@@ -165,10 +166,13 @@ export function Console({ consoleOutputs, setConsoleOutputs }: ConsoleProps) {
                   {consoleOutput.contents.map((content, contentIndex) =>
                     content.type === "image" ? (
                       <picture key={`${consoleOutput.id}-${contentIndex}`}>
-                        <img
+                        <NextImage
                           alt="output"
                           className="w-full max-w-(--breakpoint-toast-mobile) rounded-md"
+                          height={720}
                           src={content.value}
+                          unoptimized
+                          width={1280}
                         />
                       </picture>
                     ) : (

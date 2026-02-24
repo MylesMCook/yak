@@ -2,7 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
@@ -70,7 +70,8 @@ export function Chat({
 
   const [input, setInput] = useState<string>("");
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
-  const [currentModelId, setCurrentModelId] = useState(initialChatModel);
+  const initialModelRef = useRef(initialChatModel);
+  const [currentModelId, setCurrentModelId] = useState(initialModelRef.current);
   const currentModelIdRef = useRef(currentModelId);
 
   useEffect(() => {
@@ -153,10 +154,14 @@ export function Chat({
     },
   });
 
-  const searchParams = useSearchParams();
-  const query = searchParams.get("query");
+  const [query, setQuery] = useState<string | null>(null);
 
   const [hasAppendedQuery, setHasAppendedQuery] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setQuery(params.get("query"));
+  }, []);
 
   useEffect(() => {
     if (query && !hasAppendedQuery) {

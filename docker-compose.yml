@@ -1,47 +1,109 @@
 services:
+  seed:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: seed
+    environment:
+      - DATABASE_PATH=/data/pi-chat.sqlite
+      - TEST_EMAIL=${TEST_EMAIL}
+      - TEST_PASSWORD=${TEST_PASSWORD}
+    volumes:
+      - pichatdata:/data
+    networks:
+      - chat-net
+    profiles:
+      - tools
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrate-db
+    environment:
+      - DATABASE_PATH=/data/pi-chat.sqlite
+    volumes:
+      - pichatdata:/data
+    networks:
+      - chat-net
+    command: ["pnpm", "exec", "tsx", "lib/db/migrate.ts"]
+    restart: "no"
+
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: omp-chat
+      target: runner
+    container_name: pi-chat
     restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      garage:
+        condition: service_started
+      cliproxy:
+        condition: service_started
     ports:
       - "127.0.0.1:3003:3000"
     environment:
-      - AI_PROXY_URL=http://cli-proxy-api:8317/v1
+      - CLIPROXY_BASE_URL=http://cliproxy:8317/v1
       - AI_PROXY_KEY=${AI_PROXY_KEY}
       - AUTH_SECRET=${AUTH_SECRET}
-      - POSTGRES_URL=postgresql://ompchat:${POSTGRES_PASSWORD}@db:5432/ompchat
+      - DATABASE_PATH=/data/pi-chat.sqlite
       - AUTH_TRUST_HOST=true
       - AUTH_URL=https://chat.funnydomainname.com
-    depends_on:
-      db:
-        condition: service_healthy
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - S3_ENDPOINT=http://garage:3900
+      - S3_REGION=garage
+      - S3_BUCKET=${S3_BUCKET:-omp-chat-files}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+      - JOB_TOKEN=${JOB_TOKEN}
+    volumes:
+      - pichatdata:/data
     networks:
       - chat-net
 
-  db:
-    image: postgres:16-alpine
-    container_name: omp-chat-db
+  garage:
+    image: dxflrs/garage:v2.2.0
+    container_name: omp-garage
     restart: unless-stopped
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./garage.toml:/etc/garage.toml
+      - ./data/garage/meta:/var/lib/garage/meta
+      - ./data/garage/data:/var/lib/garage/data
+    networks:
+      - chat-net
+
+  cliproxy:
+    image: eceasy/cli-proxy-api:latest
+    container_name: omp-cliproxy
+    restart: unless-stopped
+    volumes:
+      - /opt/cli-proxy-api/config.yaml:/CLIProxyAPI/config.yaml
+      - /opt/cli-proxy-api/auths:/root/.cli-proxy-api
+      - /opt/cli-proxy-api/logs:/CLIProxyAPI/logs
+    networks:
+      - chat-net
+
+  jobs:
+    image: hectorm/supercronic:latest
+    container_name: omp-jobs
+    restart: unless-stopped
+    volumes:
+      - ./crontab:/app/crontab:ro
     environment:
-      - POSTGRES_USER=ompchat
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=ompchat
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ompchat"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+      - JOB_TOKEN=${JOB_TOKEN}
+    command: ["/app/crontab"]
+    depends_on:
+      app:
+        condition: service_started
     networks:
       - chat-net
 
 volumes:
-  pgdata:
+  pichatdata:
 
 networks:
   chat-net:
-    external: true
     name: omp-chat-network

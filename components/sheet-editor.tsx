@@ -2,7 +2,7 @@
 
 import { useTheme } from "next-themes";
 import { parse, unparse } from "papaparse";
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useMemo } from "react";
 import DataGrid, { textEditor } from "react-data-grid";
 import { cn } from "@/lib/utils";
 
@@ -85,19 +85,11 @@ const PureSpreadsheetEditor = ({ content, saveContent }: SheetEditorProps) => {
     });
   }, [parseData, columns]);
 
-  const [localRows, setLocalRows] = useState(initialRows);
-
-  useEffect(() => {
-    setLocalRows(initialRows);
-  }, [initialRows]);
-
   const generateCsv = (data: any[][]) => {
     return unparse(data);
   };
 
   const handleRowsChange = (newRows: any[]) => {
-    setLocalRows(newRows);
-
     const updatedData = newRows.map((row) => {
       return columns.slice(1).map((col) => row[col.key] || "");
     });
@@ -121,7 +113,7 @@ const PureSpreadsheetEditor = ({ content, saveContent }: SheetEditorProps) => {
         }
       }}
       onRowsChange={handleRowsChange}
-      rows={localRows}
+      rows={initialRows}
       style={{ height: "100%" }}
     />
   );

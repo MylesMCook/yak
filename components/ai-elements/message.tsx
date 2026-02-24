@@ -7,8 +7,16 @@ import {
   PaperclipIcon,
   XIcon,
 } from "lucide-react";
+import NextImage from "next/image";
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
-import { createContext, memo, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  memo,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Streamdown } from "streamdown";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
@@ -139,7 +147,8 @@ export const MessageBranch = ({
   className,
   ...props
 }: MessageBranchProps) => {
-  const [currentBranch, setCurrentBranch] = useState(defaultBranch);
+  const initialBranchRef = useRef(defaultBranch);
+  const [currentBranch, setCurrentBranch] = useState(initialBranchRef.current);
   const [branches, setBranches] = useState<ReactElement[]>([]);
 
   const handleBranchChange = (newBranch: number) => {
@@ -346,12 +355,12 @@ export function MessageAttachment({
     >
       {isImage ? (
         <>
-          {/* biome-ignore lint/performance/noImgElement: dynamic user-uploaded images */}
-          <img
+          <NextImage
             alt={filename || "attachment"}
             className="size-full object-cover"
             height={100}
             src={data.url}
+            unoptimized
             width={100}
           />
           {onRemove && (

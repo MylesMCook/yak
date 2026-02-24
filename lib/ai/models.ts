@@ -1,53 +1,79 @@
-export const DEFAULT_CHAT_MODEL = "gemini-3-flash";
+export const DEFAULT_CHAT_MODEL = "llama-3.3-70b-versatile";
 
 export type ChatModel = {
-	id: string;
-	name: string;
-	provider: string;
-	description: string;
+  id: string;
+  name: string;
+  provider: string;
+  description: string;
 };
 
 export const chatModels: ChatModel[] = [
-	{
-		id: "gemini-3-flash",
-		name: "Gemini 3 Flash",
-		provider: "google",
-		description: "Fast and capable",
-	},
-	{
-		id: "gemini-3.1-pro-high",
-		name: "Gemini 3.1 Pro",
-		provider: "google",
-		description: "Latest Gemini flagship",
-	},
-	{
-		id: "gpt-5.3-codex",
-		name: "GPT-5.3 Codex",
-		provider: "openai",
-		description: "Latest codex model",
-	},
-	{
-		id: "gpt-5.3-codex-spark",
-		name: "GPT-5.3 Codex Spark",
-		provider: "openai",
-		description: "Fast lightweight codex",
-	},
-	{
-		id: "gpt-5.2",
-		name: "GPT-5.2",
-		provider: "openai",
-		description: "OpenAI flagship",
-	},
+  // Groq models (free, fast inference)
+  {
+    id: "llama-3.3-70b-versatile",
+    name: "Llama 3.3 70B",
+    provider: "groq",
+    description: "Fast, versatile general chat",
+  },
+  {
+    id: "llama-3.1-8b-instant",
+    name: "Llama 3.1 8B",
+    provider: "groq",
+    description: "Ultra-fast lightweight",
+  },
+  {
+    id: "mixtral-8x7b-32768",
+    name: "Mixtral 8x7B",
+    provider: "groq",
+    description: "Strong reasoning",
+  },
+  // CLIProxyAPI models (coding tasks — Codex, Gemini, Claude)
+  {
+    id: "gemini-3-flash-preview",
+    name: "Gemini 3 Flash",
+    provider: "cliproxy",
+    description: "Fast multimodal from Google",
+  },
+  {
+    id: "gemini-3-pro-preview",
+    name: "Gemini 3 Pro",
+    provider: "cliproxy",
+    description: "Advanced reasoning from Google",
+  },
+  {
+    id: "gemini-2.5-pro",
+    name: "Gemini 2.5 Pro",
+    provider: "cliproxy",
+    description: "Reliable workhorse from Google",
+  },
+  {
+    id: "gpt-5.3-codex",
+    name: "GPT-5.3 Codex",
+    provider: "cliproxy",
+    description: "Latest codex model",
+  },
+  {
+    id: "gpt-5.3-codex-spark",
+    name: "GPT-5.3 Codex Spark",
+    provider: "cliproxy",
+    description: "Fast lightweight codex",
+  },
+  {
+    id: "gpt-5.2",
+    name: "GPT-5.2",
+    provider: "cliproxy",
+    description: "General-purpose from OpenAI",
+  },
 ];
 
 // Group models by provider for UI
 export const modelsByProvider = chatModels.reduce(
-	(acc, model) => {
-		if (!acc[model.provider]) {
-			acc[model.provider] = [];
-		}
-		acc[model.provider].push(model);
-		return acc;
-	},
-	{} as Record<string, ChatModel[]>,
+  (acc, model) => {
+    if (!acc[model.provider]) {
+      acc[model.provider] = [];
+    }
+    acc[model.provider].push(model);
+    return acc;
+  },
+  {} as Record<string, ChatModel[]>,
 );

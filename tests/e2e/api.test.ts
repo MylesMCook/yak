@@ -3,7 +3,35 @@ import { expect, test } from "@playwright/test";
 const CHAT_URL_REGEX = /\/chat\/[\w-]+/;
 const ERROR_TEXT_REGEX = /error|failed|trouble/i;
 
+/** Minimal SSE stream so useChat gets an assistant message and finishes (no real backend). */
+function mockChatStreamBody(): string {
+  const id = "mock-msg-" + Date.now();
+  const lines = [
+    `data: ${JSON.stringify({ type: "start", messageId: id })}\n\n`,
+    `data: ${JSON.stringify({ type: "text-start", id })}\n\n`,
+    `data: ${JSON.stringify({ type: "text-delta", id, delta: "Mock response." })}\n\n`,
+    `data: ${JSON.stringify({ type: "text-end", id })}\n\n`,
+    `data: ${JSON.stringify({ type: "finish" })}\n\n`,
+    "data: [DONE]\n\n",
+  ];
+  return lines.join("");
+}
+
 test.describe("Chat API Integration", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/api/chat", async (route) => {
+      if (route.request().method() !== "POST") return route.fallback();
+      await route.fulfill({
+        status: 200,
+        headers: {
+          "Content-Type": "text/event-stream",
+          "x-vercel-ai-ui-message-stream": "v1",
+        },
+        body: mockChatStreamBody(),
+      });
+    });
+  });
+
   test("sends message and receives AI response", async ({ page }) => {
     await page.goto("/");
 
@@ -77,6 +105,20 @@ test.describe("Chat Error Handling", () => {
 });
 
 test.describe("Suggested Actions", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/api/chat", async (route) => {
+      if (route.request().method() !== "POST") return route.fallback();
+      await route.fulfill({
+        status: 200,
+        headers: {
+          "Content-Type": "text/event-stream",
+          "x-vercel-ai-ui-message-stream": "v1",
+        },
+        body: mockChatStreamBody(),
+      });
+    });
+  });
+
   test("suggested actions are clickable", async ({ page }) => {
     await page.goto("/");
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useActionState, useEffect, useState } from "react";
 
@@ -10,8 +9,6 @@ import { toast } from "@/components/toast";
 import { type LoginActionState, login } from "../actions";
 
 export default function Page() {
-  const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
 
@@ -24,12 +21,17 @@ export default function Page() {
 
   const { update: updateSession } = useSession();
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: router and updateSession are stable refs
+  // biome-ignore lint/correctness/useExhaustiveDependencies: updateSession is stable ref
   useEffect(() => {
     if (state.status === "failed") {
       toast({
         type: "error",
         description: "Invalid credentials!",
+      });
+    } else if (state.status === "error") {
+      toast({
+        type: "error",
+        description: "Sign-in failed. Check server configuration.",
       });
     } else if (state.status === "invalid_data") {
       toast({
@@ -39,7 +41,6 @@ export default function Page() {
     } else if (state.status === "success") {
       setIsSuccessful(true);
       updateSession();
-      router.push("/");
     }
   }, [state.status]);
 

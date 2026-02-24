@@ -12,6 +12,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { nanoid } from "nanoid";
+import NextImage from "next/image";
 import {
   type ChangeEvent,
   type ChangeEventHandler,
@@ -310,12 +311,12 @@ export function PromptInputAttachment({
           <div className="relative size-5 shrink-0">
             <div className="flex overflow-hidden absolute inset-0 justify-center items-center rounded transition-opacity size-5 bg-background group-hover:opacity-0">
               {isImage ? (
-                /* biome-ignore lint/performance/noImgElement: dynamic user uploads */
-                <img
+                <NextImage
                   alt={filename || "attachment"}
                   className="object-cover size-5"
                   height={20}
                   src={data.url}
+                  unoptimized
                   width={20}
                 />
               ) : (
@@ -346,12 +347,12 @@ export function PromptInputAttachment({
         <div className="space-y-3 w-auto">
           {isImage && (
             <div className="flex overflow-hidden justify-center items-center w-96 max-h-96 rounded-md border">
-              {/* biome-ignore lint/performance/noImgElement: dynamic user uploads */}
-              <img
+              <NextImage
                 alt={filename || "attachment preview"}
                 className="object-contain max-w-full max-h-full"
                 height={384}
                 src={data.url}
+                unoptimized
                 width={448}
               />
             </div>
@@ -1322,13 +1323,13 @@ export const PromptInputTab = ({
   ...props
 }: PromptInputTabProps) => <div className={cn(className)} {...props} />;
 
-export type PromptInputTabLabelProps = HTMLAttributes<HTMLHeadingElement>;
+export type PromptInputTabLabelProps = HTMLAttributes<HTMLDivElement>;
 
 export const PromptInputTabLabel = ({
   className,
   ...props
 }: PromptInputTabLabelProps) => (
-  <h3
+  <div
     className={cn(
       "px-3 mb-2 text-xs font-medium text-muted-foreground",
       className

@@ -19,6 +19,9 @@ const PORT = process.env.PORT || 3000;
  */
 const baseURL = `http://localhost:${PORT}`;
 
+const hasE2eEnv =
+  Boolean(process.env.TEST_EMAIL) && Boolean(process.env.TEST_PASSWORD);
+
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
@@ -52,12 +55,28 @@ export default defineConfig({
   /* Configure projects */
   projects: [
     {
-      name: "e2e",
-      testMatch: /e2e\/.*.test.ts/,
-      use: {
-        ...devices["Desktop Chrome"],
-      },
+      name: "setup",
+      testMatch: /auth\.setup\.ts/,
+      use: { ...devices["Desktop Chrome"] },
     },
+    {
+      name: "e2e-auth",
+      testMatch: /auth\.test\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    ...(hasE2eEnv
+      ? [
+          {
+            name: "e2e-app",
+            testMatch: /e2e\/(chat|api|model-selector)\.test\.ts/,
+            use: {
+              ...devices["Desktop Chrome"],
+              storageState: "tests/.auth/user.json",
+            },
+            dependencies: ["setup"],
+          },
+        ]
+      : []),
 
     // {
     //   name: 'firefox',

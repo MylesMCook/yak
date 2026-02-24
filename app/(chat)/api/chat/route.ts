@@ -2,29 +2,28 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
-  generateId,
   stepCountIs,
   streamText,
 } from "ai";
-import { after } from "next/server";
-import { createResumableStreamContext } from "resumable-stream";
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
+import { buildMemoryContext } from "@/lib/ai/memory-context";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
+import { searchMemory } from "@/lib/ai/tools/search-memory";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { isProductionEnvironment } from "@/lib/constants";
 import {
-  createStreamId,
   deleteChatById,
   getChatById,
   getMessageCountByUserId,
   getMessagesByChatId,
   saveChat,
   saveMessages,
+  touchChat,
   updateChatTitleById,
   updateMessage,
 } from "@/lib/db/queries";
@@ -36,16 +35,6 @@ import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
 export const maxDuration = 60;
-
-function getStreamContext() {
-  try {
-    return createResumableStreamContext({ waitUntil: after });
-  } catch (_) {
-    return null;
-  }
-}
-
-export { getStreamContext };
 
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
@@ -68,19 +57,19 @@ export async function POST(request: Request) {
     }
 
     const userType: UserType = session.user.type;
+    const isToolApprovalFlow = Boolean(messages);
 
-    const messageCount = await getMessageCountByUserId({
-      id: session.user.id,
-      differenceInHours: 24,
-    });
+    const [messageCount, chat] = await Promise.all([
+      getMessageCountByUserId({
+        id: session.user.id,
+        differenceInHours: 24,
+      }),
+      getChatById({ id }),
+    ]);
 
     if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
       return new OpenChatError("rate_limit:chat").toResponse();
     }
-
-    const isToolApprovalFlow = Boolean(messages);
-
-    const chat = await getChatById({ id });
     let messagesFromDb: DBMessage[] = [];
     let titlePromise: Promise<string> | null = null;
 
@@ -131,14 +120,17 @@ export async function POST(request: Request) {
       selectedChatModel.includes("reasoning") ||
       selectedChatModel.includes("thinking");
 
-    const modelMessages = await convertToModelMessages(uiMessages);
+    const [modelMessages, memoryContext] = await Promise.all([
+      convertToModelMessages(uiMessages),
+      buildMemoryContext({ userId: session.user.id }),
+    ]);
 
     const stream = createUIMessageStream({
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
       execute: async ({ writer: dataStream }) => {
         const result = streamText({
           model: getLanguageModel(selectedChatModel),
-          system: systemPrompt({ selectedChatModel, requestHints }),
+          system: systemPrompt({ selectedChatModel, requestHints, memoryContext }),
           messages: modelMessages,
           stopWhen: stepCountIs(5),
           experimental_activeTools: isReasoningModel
@@ -148,6 +140,7 @@ export async function POST(request: Request) {
                 "createDocument",
                 "updateDocument",
                 "requestSuggestions",
+                "searchMemory",
               ],
           providerOptions: isReasoningModel
             ? {
@@ -161,6 +154,7 @@ export async function POST(request: Request) {
             createDocument: createDocument({ session, dataStream }),
             updateDocument: updateDocument({ session, dataStream }),
             requestSuggestions: requestSuggestions({ session, dataStream }),
+            searchMemory,
           },
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
@@ -178,6 +172,7 @@ export async function POST(request: Request) {
       },
       generateId: generateUUID,
       onFinish: async ({ messages: finishedMessages }) => {
+        let savedCount = 0;
         if (isToolApprovalFlow) {
           for (const finishedMsg of finishedMessages) {
             const existingMsg = uiMessages.find((m) => m.id === finishedMsg.id);
@@ -199,6 +194,7 @@ export async function POST(request: Request) {
                   },
                 ],
               });
+              savedCount++;
             }
           }
         } else if (finishedMessages.length > 0) {
@@ -212,6 +208,13 @@ export async function POST(request: Request) {
               chatId: id,
             })),
           });
+          savedCount = finishedMessages.length;
+        }
+        // Track activity for memory finalization
+        // +1 for the user message saved earlier in the request
+        const totalNew = savedCount + (message?.role === "user" ? 1 : 0);
+        if (totalNew > 0) {
+          await touchChat({ chatId: id, addedMessages: totalNew });
         }
       },
       onError: () => "Oops, an error occurred!",
@@ -219,24 +222,6 @@ export async function POST(request: Request) {
 
     return createUIMessageStreamResponse({
       stream,
-      async consumeSseStream({ stream: sseStream }) {
-        if (!process.env.REDIS_URL) {
-          return;
-        }
-        try {
-          const streamContext = getStreamContext();
-          if (streamContext) {
-            const streamId = generateId();
-            await createStreamId({ streamId, chatId: id });
-            await streamContext.createNewResumableStream(
-              streamId,
-              () => sseStream
-            );
-          }
-        } catch (_) {
-          // ignore redis errors
-        }
-      },
     });
   } catch (error) {
     const vercelId = request.headers.get("x-vercel-id");

@@ -46,6 +46,7 @@ function PureMessages({
   return (
     <div className="relative flex-1 bg-background">
       <div
+        aria-live="polite"
         className="absolute inset-0 touch-pan-y overflow-y-auto bg-background"
         ref={messagesContainerRef}
       >
