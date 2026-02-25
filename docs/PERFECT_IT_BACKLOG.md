@@ -1,6 +1,6 @@
-# Perfect-it backlog — pi-chat
+# Perfect-it backlog — Yak
 
-Prioritized list of work to make pi-chat a full-featured, production-ready web app. Sources: browser-probe report, Vercel Web Interface Guidelines audit, and Vercel React best-practices audit. Order by severity; group by area.
+Prioritized list of work to make Yak a full-featured, production-ready web app. Sources: browser-probe report, Web Interface Guidelines audit, and React best-practices audit. Order by severity; group by area.
 
 ---
 

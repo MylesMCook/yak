@@ -1,4 +1,4 @@
-# pi-chat: what's done and what to fix next
+# Yak: what's done and what to fix next
 
 ## Run locally (minimal)
 

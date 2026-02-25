@@ -16,14 +16,7 @@ const csp = [
 const nextConfig: NextConfig = {
   output: "standalone",
   cacheComponents: true,
-  serverExternalPackages: ["@huggingface/transformers", "onnxruntime-node"],
-  images: {
-    remotePatterns: [
-      {
-        hostname: "avatar.vercel.sh",
-      },
-    ],
-  },
+  serverExternalPackages: ["@huggingface/transformers"],
   async headers() {
     return [
       {

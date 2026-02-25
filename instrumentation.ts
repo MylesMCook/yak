@@ -1,5 +1,3 @@
-import { registerOTel } from "@vercel/otel";
-
-export function register() {
-  registerOTel({ serviceName: "yak" });
-}
+// Instrumentation hook — no-op for self-hosted deployment.
+// Remove @vercel/otel to avoid sending telemetry to Vercel.
+export function register() {}
