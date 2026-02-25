@@ -12,7 +12,7 @@ const THINKING_SUFFIX_REGEX = /-thinking$/;
 // CLIProxyAPI — coding tasks (Codex primary, Claude secondary, Gemini tertiary)
 const cliproxy = createOpenAICompatible({
   name: "cliproxy",
-  baseURL: process.env.CLIPROXY_BASE_URL || process.env.AI_PROXY_URL || "http://localhost:8317/v1",
+  baseURL: process.env.CLIPROXY_BASE_URL || "http://cliproxy:8317/v1",
   apiKey: process.env.AI_PROXY_KEY || "fake",
 });
 

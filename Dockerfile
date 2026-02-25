@@ -21,7 +21,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
-RUN mkdir -p /app/.next/cache && chown nextjs:nodejs /app/.next/cache
+RUN mkdir -p /app/.next/cache /data && chown nextjs:nodejs /app/.next/cache /data
 USER nextjs
 EXPOSE 3000
 CMD ["node", "server.js"]
@@ -30,13 +30,13 @@ CMD ["node", "server.js"]
 FROM deps AS migrate-db
 WORKDIR /app
 COPY lib/db ./lib/db
-ENV DATABASE_PATH=/data/pi-chat.sqlite
+ENV DATABASE_PATH=/data/yak.sqlite
 CMD ["pnpm", "exec", "tsx", "lib/db/migrate.ts"]
 
-# One-off seed: mount pichatdata at /data, set DATABASE_PATH=/data/pi-chat.sqlite and TEST_EMAIL/TEST_PASSWORD
+# One-off seed: mount yakdata at /data, set DATABASE_PATH=/data/yak.sqlite and TEST_EMAIL/TEST_PASSWORD
 FROM deps AS seed
 WORKDIR /app
 COPY tests/seed-test-user.ts ./
 RUN pnpm add -D tsx dotenv bcrypt-ts
-ENV DATABASE_PATH=/data/pi-chat.sqlite
+ENV DATABASE_PATH=/data/yak.sqlite
 CMD ["pnpm", "exec", "tsx", "seed-test-user.ts"]

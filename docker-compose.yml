@@ -5,11 +5,11 @@ services:
       dockerfile: Dockerfile
       target: seed
     environment:
-      - DATABASE_PATH=/data/pi-chat.sqlite
+      - DATABASE_PATH=/data/yak.sqlite
       - TEST_EMAIL=${TEST_EMAIL}
       - TEST_PASSWORD=${TEST_PASSWORD}
     volumes:
-      - pichatdata:/data
+      - yakdata:/data
     networks:
       - chat-net
     profiles:
@@ -21,12 +21,12 @@ services:
       dockerfile: Dockerfile
       target: migrate-db
     environment:
-      - DATABASE_PATH=/data/pi-chat.sqlite
+      - DATABASE_PATH=/data/yak.sqlite
     volumes:
-      - pichatdata:/data
+      - yakdata:/data
     networks:
       - chat-net
-    command: ["pnpm", "exec", "tsx", "lib/db/migrate.ts"]
+    command: ["sh", "-c", "pnpm exec tsx lib/db/migrate.ts && chown -R 1001:1001 /data"]
     restart: "no"
 
   app:
@@ -34,7 +34,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runner
-    container_name: pi-chat
+    container_name: yak
     restart: unless-stopped
     depends_on:
       migrate:
@@ -43,30 +43,35 @@ services:
         condition: service_started
       cliproxy:
         condition: service_started
-    ports:
-      - "127.0.0.1:3003:3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.yak.rule=Host(`chat.funnydomainname.com`)"
+      - "traefik.http.routers.yak.entrypoints=web"
+      - "traefik.http.services.yak.loadbalancer.server.port=3000"
     environment:
+      - HOSTNAME=0.0.0.0
       - CLIPROXY_BASE_URL=http://cliproxy:8317/v1
       - AI_PROXY_KEY=${AI_PROXY_KEY}
       - AUTH_SECRET=${AUTH_SECRET}
-      - DATABASE_PATH=/data/pi-chat.sqlite
+      - DATABASE_PATH=/data/yak.sqlite
       - AUTH_TRUST_HOST=true
       - AUTH_URL=https://chat.funnydomainname.com
       - GROQ_API_KEY=${GROQ_API_KEY}
       - S3_ENDPOINT=http://garage:3900
       - S3_REGION=garage
-      - S3_BUCKET=${S3_BUCKET:-omp-chat-files}
+      - S3_BUCKET=${S3_BUCKET:-yak-files}
       - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
       - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
       - JOB_TOKEN=${JOB_TOKEN}
     volumes:
-      - pichatdata:/data
+      - yakdata:/data
     networks:
       - chat-net
+      - traefik
 
   garage:
     image: dxflrs/garage:v2.2.0
-    container_name: omp-garage
+    container_name: yak-garage
     restart: unless-stopped
     volumes:
       - ./garage.toml:/etc/garage.toml
@@ -77,7 +82,7 @@ services:
 
   cliproxy:
     image: eceasy/cli-proxy-api:latest
-    container_name: omp-cliproxy
+    container_name: yak-cliproxy
     restart: unless-stopped
     volumes:
       - /opt/cli-proxy-api/config.yaml:/CLIProxyAPI/config.yaml
@@ -88,7 +93,7 @@ services:
 
   jobs:
     image: hectorm/supercronic:latest
-    container_name: omp-jobs
+    container_name: yak-jobs
     restart: unless-stopped
     volumes:
       - ./crontab:/app/crontab:ro
@@ -102,8 +107,10 @@ services:
       - chat-net
 
 volumes:
-  pichatdata:
+  yakdata:
 
 networks:
   chat-net:
-    name: omp-chat-network
+    name: yak-network
+  traefik:
+    external: true

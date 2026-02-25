@@ -8,7 +8,7 @@ import Database from "better-sqlite3";
 import { hashSync, genSaltSync } from "bcrypt-ts";
 config({ path: ".env.local" });
 
-const dbPath = process.env.DATABASE_PATH ?? "./data/pi-chat.sqlite";
+const dbPath = process.env.DATABASE_PATH ?? "./data/yak.sqlite";
 const email = process.env.TEST_EMAIL;
 const password = process.env.TEST_PASSWORD;
 
@@ -23,7 +23,7 @@ const hash = hashSync(password, genSaltSync(10));
 
 try {
   db.prepare(
-    "INSERT OR REPLACE INTO User (id, email, password) VALUES (?, ?, ?)"
+    "INSERT OR REPLACE INTO users (id, email, password) VALUES (?, ?, ?)"
   ).run(testUserId, email, hash);
   console.log("Test user created:", email);
 } catch (err) {

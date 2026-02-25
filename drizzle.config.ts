@@ -5,7 +5,7 @@ config({
   path: ".env.local",
 });
 
-const dbPath = process.env.DATABASE_PATH ?? "./data/pi-chat.sqlite";
+const dbPath = process.env.DATABASE_PATH ?? "./data/yak.sqlite";
 const url = dbPath.startsWith("/") ? `file:${dbPath}` : `file:${dbPath}`;
 
 export default defineConfig({

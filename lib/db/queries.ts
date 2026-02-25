@@ -42,7 +42,7 @@ import {
 } from "./schema";
 import { generateHashedPassword } from "./utils";
 
-const dbPath = process.env.DATABASE_PATH ?? "./data/pi-chat.sqlite";
+const dbPath = process.env.DATABASE_PATH ?? "./data/yak.sqlite";
 const sqlite = new Database(dbPath);
 sqlite.pragma("journal_mode = WAL");
 sqlite.pragma("busy_timeout = 5000");

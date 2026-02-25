@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-      DATABASE_PATH: ./data/pi-chat.sqlite
+      DATABASE_PATH: ./data/yak.sqlite
 
     steps:
       - uses: actions/checkout@v4

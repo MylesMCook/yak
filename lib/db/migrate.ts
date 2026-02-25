@@ -9,7 +9,7 @@ config({
   path: ".env.local",
 });
 
-const dbPath = process.env.DATABASE_PATH ?? "./data/pi-chat.sqlite";
+const dbPath = process.env.DATABASE_PATH ?? "./data/yak.sqlite";
 
 const runMigrate = () => {
   const dir = dirname(dbPath);

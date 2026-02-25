@@ -1,8 +1,8 @@
-# pi-chat
+# Yak
 
-Personal AI chat app. Self-hosted on beelink, accessible at `chat.funnydomainname.com`.
+Personal AI chat. Self-hosted, model-agnostic, private.
 
-Built on the [OpenChat](https://openchat.dev) template (Next.js 16, AI SDK, shadcn/ui).
+Accessible at `chat.funnydomainname.com`. Built with Next.js 16, AI SDK, shadcn/ui.
 
 ## Stack
 
