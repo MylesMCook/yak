@@ -36,6 +36,10 @@ services:
       target: runner
     container_name: yak
     restart: unless-stopped
+    mem_limit: 512m
+    cpus: 1.0
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -48,6 +52,7 @@ services:
       - "traefik.http.routers.yak.rule=Host(`chat.funnydomainname.com`)"
       - "traefik.http.routers.yak.entrypoints=web"
       - "traefik.http.services.yak.loadbalancer.server.port=3000"
+      - "traefik.http.routers.yak.middlewares=secure-headers,rate-limit"
     environment:
       - HOSTNAME=0.0.0.0
       - CLIPROXY_BASE_URL=http://cliproxy:8317/v1
@@ -74,6 +79,10 @@ services:
     image: dxflrs/garage:v2.2.0
     container_name: yak-garage
     restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - ./garage.toml:/etc/garage.toml
       - ./data/garage/meta:/var/lib/garage/meta
@@ -85,6 +94,10 @@ services:
     image: eceasy/cli-proxy-api:latest
     container_name: yak-cliproxy
     restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.25
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - /opt/cli-proxy-api/config.yaml:/CLIProxyAPI/config.yaml
       - /opt/cli-proxy-api/auths:/root/.cli-proxy-api
@@ -96,6 +109,10 @@ services:
     image: hectorm/supercronic:latest
     container_name: yak-jobs
     restart: unless-stopped
+    mem_limit: 64m
+    cpus: 0.1
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - ./crontab:/app/crontab:ro
     environment:
