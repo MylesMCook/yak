@@ -52,7 +52,7 @@ services:
       - "traefik.http.routers.yak.rule=Host(`chat.funnydomainname.com`)"
       - "traefik.http.routers.yak.entrypoints=web"
       - "traefik.http.services.yak.loadbalancer.server.port=3000"
-      - "traefik.http.routers.yak.middlewares=secure-headers,rate-limit"
+      - "traefik.http.routers.yak.middlewares=secure-headers@file,rate-limit@file"
     environment:
       - HOSTNAME=0.0.0.0
       - CLIPROXY_BASE_URL=http://cliproxy:8317/v1
