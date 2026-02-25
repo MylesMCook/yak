@@ -1,2 +1,2 @@
-*/30 * * * * curl -fsS -H "X-JOB-TOKEN: $JOB_TOKEN" http://pi-chat:3000/api/jobs/finalize-idle
-0 4 * * *   curl -fsS -H "X-JOB-TOKEN: $JOB_TOKEN" http://pi-chat:3000/api/jobs/compress-memory
+*/30 * * * * curl -fsS -H "X-JOB-TOKEN: $JOB_TOKEN" http://yak:3000/api/jobs/finalize-idle
+0 4 * * *   curl -fsS -H "X-JOB-TOKEN: $JOB_TOKEN" http://yak:3000/api/jobs/compress-memory

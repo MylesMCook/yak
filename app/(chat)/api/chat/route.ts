@@ -120,9 +120,20 @@ export async function POST(request: Request) {
       selectedChatModel.includes("reasoning") ||
       selectedChatModel.includes("thinking");
 
+    // Extract text from current user message for semantic memory retrieval
+    const currentMessageText = (() => {
+      if (!message || message.role !== "user") return undefined;
+      const parts = message.parts as Array<{ type: string; text?: string }>;
+      return parts
+        .filter((p) => p.type === "text" && p.text)
+        .map((p) => p.text!)
+        .join(" ")
+        .slice(0, 500) || undefined;
+    })();
+
     const [modelMessages, memoryContext] = await Promise.all([
       convertToModelMessages(uiMessages),
-      buildMemoryContext({ userId: session.user.id }),
+      buildMemoryContext({ userId: session.user.id, currentMessage: currentMessageText }),
     ]);
 
     const stream = createUIMessageStream({
@@ -154,7 +165,7 @@ export async function POST(request: Request) {
             createDocument: createDocument({ session, dataStream }),
             updateDocument: updateDocument({ session, dataStream }),
             requestSuggestions: requestSuggestions({ session, dataStream }),
-            searchMemory,
+            searchMemory: searchMemory({ session }),
           },
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,

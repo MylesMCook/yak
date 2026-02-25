@@ -7,7 +7,9 @@ import {
   getFinalizedChatsForDistillation,
   getMessagesByChatId,
   insertDistilledMemory,
+  saveSummaryEmbedding,
 } from "@/lib/db/queries";
+import { embed, serializeEmbedding } from "@/lib/memory/embedder";
 
 const HOURS_48 = 48 * 60 * 60 * 1000;
 const DAYS_7 = 7 * 24 * 60 * 60 * 1000;
@@ -54,12 +56,16 @@ async function runTier1(userId: string) {
       prompt: `Summarize this conversation into 3-5 bullet points capturing key outcomes, decisions, and facts. Be concise.\n\n${transcript}`,
     });
 
-    await insertDistilledMemory({
+    const content1 = text.slice(0, 2000);
+    const id1 = await insertDistilledMemory({
       userId,
       tier: 1,
-      content: text.slice(0, 2000),
+      content: content1,
       sourceChatIds: [chatId],
     });
+    // Embed the distilled summary
+    const [vec1] = await embed([content1]);
+    await saveSummaryEmbedding({ sourceType: "distilled", sourceId: id1, embedding: serializeEmbedding(vec1) });
     created++;
   }
   return created;
@@ -86,12 +92,15 @@ async function runTier2(userId: string) {
     prompt: `Compress these daily chat summaries into a weekly narrative. Focus on patterns, recurring themes, and significant changes. Be concise (under 1000 chars).\n\n${combined.slice(0, 8000)}`,
   });
 
-  await insertDistilledMemory({
+  const content2 = text.slice(0, 1500);
+  const id2 = await insertDistilledMemory({
     userId,
     tier: 2,
-    content: text.slice(0, 1500),
+    content: content2,
     sourceChatIds: allSourceIds,
   });
+  const [vec2] = await embed([content2]);
+  await saveSummaryEmbedding({ sourceType: "distilled", sourceId: id2, embedding: serializeEmbedding(vec2) });
   await deleteDistilledMemoryByIds(old.map((e) => e.id));
   return 1;
 }
@@ -117,12 +126,15 @@ async function runTier3(userId: string) {
     prompt: `Compress these weekly summaries into long-term patterns and core knowledge. Focus on stable preferences, recurring decisions, and lasting insights. Be concise (under 800 chars).\n\n${combined.slice(0, 8000)}`,
   });
 
-  await insertDistilledMemory({
+  const content3 = text.slice(0, 1000);
+  const id3 = await insertDistilledMemory({
     userId,
     tier: 3,
-    content: text.slice(0, 1000),
+    content: content3,
     sourceChatIds: allSourceIds,
   });
+  const [vec3] = await embed([content3]);
+  await saveSummaryEmbedding({ sourceType: "distilled", sourceId: id3, embedding: serializeEmbedding(vec3) });
   await deleteDistilledMemoryByIds(old.map((e) => e.id));
   return 1;
 }

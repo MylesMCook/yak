@@ -29,6 +29,13 @@
       "when": 1771910400000,
       "tag": "0003_is_rename",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1772001172635,
+      "tag": "0004_daily_guardian",
+      "breakpoints": true
     }
   ]
 }

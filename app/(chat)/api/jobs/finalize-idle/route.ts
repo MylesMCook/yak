@@ -1,5 +1,10 @@
 import { finalizeChatAndSummarize } from "@/lib/ai/memory";
-import { getIdleUnfinalizedChats } from "@/lib/db/queries";
+import {
+  getIdleUnfinalizedChats,
+  getMessagesWithoutEmbeddings,
+  saveMessageEmbedding,
+} from "@/lib/db/queries";
+import { embed, serializeEmbedding } from "@/lib/memory/embedder";
 
 const IDLE_MINUTES = Number(process.env.IDLE_MINUTES ?? "30");
 
@@ -14,10 +19,27 @@ export async function POST(request: Request) {
   });
 
   let finalized = 0;
+  let embedded = 0;
   for (const { id, userId } of idleChats) {
     try {
       await finalizeChatAndSummarize({ chatId: id, userId });
       finalized++;
+
+      // Embed all un-embedded messages from this chat
+      const toEmbed = await getMessagesWithoutEmbeddings({ chatId: id });
+      const nonEmpty = toEmbed.filter((m) => m.content.length > 0);
+      if (nonEmpty.length > 0) {
+        const vecs = await embed(nonEmpty.map((m) => m.content));
+        await Promise.all(
+          nonEmpty.map((m, i) =>
+            saveMessageEmbedding({
+              messageId: m.id,
+              embedding: serializeEmbedding(vecs[i]),
+            })
+          )
+        );
+        embedded += nonEmpty.length;
+      }
     } catch (err) {
       console.error(`[finalize-idle] failed for chat ${id}:`, err);
     }
@@ -27,5 +49,6 @@ export async function POST(request: Request) {
     ok: true,
     checked: idleChats.length,
     finalized,
+    embedded,
   });
 }

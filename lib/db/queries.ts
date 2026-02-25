@@ -33,9 +33,11 @@ import {
   type MemorySummary,
   memorySummaryVersions,
   message,
+  messageEmbeddings,
   type Suggestion,
   stream,
   suggestion,
+  summaryEmbeddings,
   type User,
   user,
   vote,
@@ -735,20 +737,23 @@ export async function getDistilledMemory({
     .limit(maxRows);
 }
 
-/** Insert a distilled memory entry */
+/** Insert a distilled memory entry, returns the new entry ID */
 export async function insertDistilledMemory(entry: {
   userId: string;
   tier: number;
   content: string;
   sourceChatIds: string[];
-}) {
+}): Promise<string> {
+  const id = crypto.randomUUID();
   await db.insert(distilledMemory).values({
+    id,
     userId: entry.userId,
     tier: entry.tier,
     content: entry.content,
     sourceChatIds: JSON.stringify(entry.sourceChatIds),
     createdAt: Date.now(),
   });
+  return id;
 }
 
 /** Delete distilled memory entries by IDs */
@@ -792,6 +797,124 @@ export async function getAllUserIds(): Promise<string[]> {
 /** Get the raw SQLite DB handle (for FTS5 queries) */
 export function getRawDb() {
   return sqlite;
+}
+
+// --- Embedding queries ---
+
+/** Save (upsert) an embedding for a message */
+export async function saveMessageEmbedding({
+  messageId,
+  embedding,
+}: {
+  messageId: string;
+  embedding: string;
+}) {
+  await db
+    .insert(messageEmbeddings)
+    .values({ messageId, embedding, createdAt: Date.now() })
+    .onConflictDoUpdate({
+      target: messageEmbeddings.messageId,
+      set: { embedding, createdAt: Date.now() },
+    });
+}
+
+/** Get messages from a chat that don't yet have embeddings */
+export async function getMessagesWithoutEmbeddings({
+  chatId,
+}: {
+  chatId: string;
+}): Promise<Array<{ id: string; content: string; createdAt: Date }>> {
+  // Use raw db for the join since Drizzle doesn't easily express NOT IN subquery
+  const rows = sqlite
+    .prepare(
+      `SELECT m.id, m.parts, m.created_at
+       FROM messages m
+       WHERE m.chat_id = ?
+         AND m.id NOT IN (SELECT message_id FROM message_embeddings)
+       ORDER BY m.created_at ASC`
+    )
+    .all(chatId) as Array<{
+    id: string;
+    parts: string;
+    created_at: number;
+  }>;
+
+  return rows.map((r) => {
+    const parts = JSON.parse(r.parts) as Array<{ type: string; text?: string }>;
+    const content = parts
+      .filter((p) => p.type === "text" && p.text)
+      .map((p) => p.text!)
+      .join("\n")
+      .trim();
+    return { id: r.id, content, createdAt: new Date(r.created_at) };
+  });
+}
+
+/** Load all message embeddings for a user (for in-memory cosine search) */
+export function getAllMessageEmbeddings(userId: string): Array<{
+  id: string;
+  messageId: string;
+  embedding: string;
+  createdAt: number;
+}> {
+  return sqlite
+    .prepare(
+      `SELECT me.id, me.message_id, me.embedding, me.created_at
+       FROM message_embeddings me
+       JOIN messages m ON m.id = me.message_id
+       JOIN chats c ON c.id = m.chat_id
+       WHERE c.user_id = ?`
+    )
+    .all(userId) as Array<{
+    id: string;
+    messageId: string;
+    embedding: string;
+    createdAt: number;
+  }>;
+}
+
+/** Load all message metadata for a set of message IDs */
+export function getMessagesByIds(
+  ids: string[]
+): Array<{ id: string; chatId: string; role: string; content: string; createdAt: number }> {
+  if (ids.length === 0) return [];
+  const placeholders = ids.map(() => "?").join(",");
+  const rows = sqlite
+    .prepare(
+      `SELECT m.id, m.chat_id, m.role, m.parts, m.created_at
+       FROM messages m
+       WHERE m.id IN (${placeholders})`
+    )
+    .all(...ids) as Array<{ id: string; chat_id: string; role: string; parts: string; created_at: number }>;
+
+  return rows.map((r) => {
+    const parts = JSON.parse(r.parts) as Array<{ type: string; text?: string }>;
+    const content = parts
+      .filter((p) => p.type === "text" && p.text)
+      .map((p) => p.text!)
+      .join(" ")
+      .slice(0, 300);
+    return { id: r.id, chatId: r.chat_id, role: r.role, content, createdAt: r.created_at };
+  });
+}
+
+/** Save (upsert) an embedding for a summary */
+export async function saveSummaryEmbedding({
+  sourceType,
+  sourceId,
+  embedding,
+}: {
+  sourceType: string;
+  sourceId: string;
+  embedding: string;
+}) {
+  sqlite
+    .prepare(
+      `INSERT INTO summary_embeddings (id, source_type, source_id, embedding, created_at)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(source_id, source_type) DO UPDATE SET embedding = excluded.embedding, created_at = excluded.created_at`
+    )
+    .run(crypto.randomUUID(), sourceType, sourceId, embedding, Date.now());
 }
 
 // --- Agent task queries ---

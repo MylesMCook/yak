@@ -201,6 +201,29 @@ export type MemorySummaryVersion = InferSelectModel<
   typeof memorySummaryVersions
 >;
 
+// --- Embedding tables ---
+
+export const messageEmbeddings = sqliteTable("message_embeddings", {
+  id: uuid(),
+  messageId: text("message_id")
+    .notNull()
+    .references(() => message.id, { onDelete: "cascade" }),
+  embedding: text("embedding").notNull(), // JSON array of float32 values
+  createdAt: integer("created_at").notNull(),
+});
+
+export type MessageEmbedding = InferSelectModel<typeof messageEmbeddings>;
+
+export const summaryEmbeddings = sqliteTable("summary_embeddings", {
+  id: uuid(),
+  sourceType: text("source_type").notNull(), // 'distilled' | 'rolling'
+  sourceId: text("source_id").notNull(),
+  embedding: text("embedding").notNull(), // JSON array of float32 values
+  createdAt: integer("created_at").notNull(),
+});
+
+export type SummaryEmbedding = InferSelectModel<typeof summaryEmbeddings>;
+
 // --- Agent layer tables ---
 
 export const agentTasks = sqliteTable("agent_tasks", {
