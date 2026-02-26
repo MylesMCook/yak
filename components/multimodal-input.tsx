@@ -120,24 +120,35 @@ function PureMultimodalInput({
     "input",
     ""
   );
+  const [localStorageChatId, setLocalStorageChatId] = useLocalStorage(
+    "input-chat-id",
+    ""
+  );
 
   useEffect(() => {
     if (textareaRef.current) {
-      const domValue = textareaRef.current.value;
-      // Prefer DOM value over localStorage to handle hydration
-      const finalValue = domValue || localStorageInput || "";
-      setInput(finalValue);
-      setLocalStorageInput(finalValue);
+      // Only restore input if it belongs to this chat
+      if (localStorageChatId === chatId) {
+        const domValue = textareaRef.current.value;
+        const finalValue = domValue || localStorageInput || "";
+        setInput(finalValue);
+      } else {
+        // Different chat — clear stale input
+        setInput("");
+        setLocalStorageInput("");
+        setLocalStorageChatId(chatId);
+      }
       adjustHeight();
     }
     // Only run once after hydration
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [adjustHeight, localStorageInput, setInput, setLocalStorageInput]);
+  }, []);
 
   const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = event.target.value;
     setInput(value);
     setLocalStorageInput(value);
+    setLocalStorageChatId(chatId);
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);

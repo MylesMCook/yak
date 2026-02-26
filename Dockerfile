@@ -21,7 +21,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
-RUN mkdir -p /app/.next/cache /data && chown nextjs:nodejs /app/.next/cache /data
+RUN rm -f /app/.env && mkdir -p /app/.next/cache /data && chown nextjs:nodejs /app/.next/cache /data
 USER nextjs
 EXPOSE 3000
 CMD ["node", "server.js"]

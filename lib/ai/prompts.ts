@@ -47,41 +47,13 @@ You help with:
 
 Be direct, concise, and action-oriented. When asked to write, create, or help with something, just do it directly. Don't ask clarifying questions unless absolutely necessary — make reasonable assumptions and proceed.`;
 
-export type RequestHints = {
-  latitude: string | undefined;
-  longitude: string | undefined;
-  city: string | undefined;
-  country: string | undefined;
-};
-
-export const getRequestPromptFromHints = (requestHints: RequestHints) => {
-  const hasAnyHint =
-    requestHints.latitude ||
-    requestHints.longitude ||
-    requestHints.city ||
-    requestHints.country;
-  if (!hasAnyHint) {
-    return "";
-  }
-  return `\
-About the origin of user's request:
-- lat: ${requestHints.latitude}
-- lon: ${requestHints.longitude}
-- city: ${requestHints.city}
-- country: ${requestHints.country}
-`;
-};
-
 export const systemPrompt = ({
   selectedChatModel,
-  requestHints,
   memoryContext,
 }: {
   selectedChatModel: string;
-  requestHints: RequestHints;
   memoryContext?: string;
 }) => {
-  const requestPrompt = getRequestPromptFromHints(requestHints);
   const memoryBlock = memoryContext
     ? `\n\n## Your Memory\n${memoryContext}`
     : "";
@@ -91,10 +63,10 @@ export const systemPrompt = ({
     selectedChatModel.includes("reasoning") ||
     selectedChatModel.includes("thinking")
   ) {
-    return `${regularPrompt}${memoryBlock}\n\n${requestPrompt}`;
+    return `${regularPrompt}${memoryBlock}`;
   }
 
-  return `${regularPrompt}${memoryBlock}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+  return `${regularPrompt}${memoryBlock}\n\n${artifactsPrompt}`;
 };
 
 export const codePrompt = `

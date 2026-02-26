@@ -8,7 +8,7 @@ import {
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { buildMemoryContext } from "@/lib/ai/memory-context";
-import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
+import { systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
@@ -93,13 +93,6 @@ export async function POST(request: Request) {
       ? (messages as ChatMessage[])
       : [...convertToUIMessages(messagesFromDb), message as ChatMessage];
 
-    const requestHints: RequestHints = {
-      longitude: undefined,
-      latitude: undefined,
-      city: undefined,
-      country: undefined,
-    };
-
     if (message?.role === "user") {
       await saveMessages({
         messages: [
@@ -140,7 +133,7 @@ export async function POST(request: Request) {
       execute: async ({ writer: dataStream }) => {
         const result = streamText({
           model: getLanguageModel(selectedChatModel),
-          system: systemPrompt({ selectedChatModel, requestHints, memoryContext }),
+          system: systemPrompt({ selectedChatModel, memoryContext }),
           messages: modelMessages,
           stopWhen: stepCountIs(5),
           experimental_activeTools: isReasoningModel
