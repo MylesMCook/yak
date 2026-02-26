@@ -1,5 +1,6 @@
 import { generateText } from "ai";
 import { getGroqModel } from "@/lib/ai/providers";
+import { extractTextFromParts } from "@/lib/ai/memory";
 import {
   deleteDistilledMemoryByIds,
   getAllUserIds,
@@ -14,16 +15,6 @@ import { embed, serializeEmbedding } from "@/lib/memory/embedder";
 const HOURS_48 = 48 * 60 * 60 * 1000;
 const DAYS_7 = 7 * 24 * 60 * 60 * 1000;
 const DAYS_30 = 30 * 24 * 60 * 60 * 1000;
-
-function extractTextFromParts(parts: unknown): string {
-  if (!Array.isArray(parts)) return String(parts ?? "");
-  return parts
-    .filter(
-      (p: any) => p?.type === "text" && typeof p?.text === "string",
-    )
-    .map((p: any) => p.text)
-    .join("\n");
-}
 
 async function runTier1(userId: string) {
   const existing = await getDistilledMemory({ userId, tier: 1 });

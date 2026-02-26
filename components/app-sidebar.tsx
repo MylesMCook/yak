@@ -80,6 +80,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
+                        aria-label="Agent Tasks"
                         className="h-8 p-1 md:h-fit md:p-2"
                         onClick={() => {
                           setOpenMobile(false);
@@ -100,6 +101,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
+                        aria-label="Delete all chats"
                         className="h-8 p-1 md:h-fit md:p-2"
                         onClick={() => setShowDeleteAllDialog(true)}
                         type="button"
@@ -116,6 +118,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
+                      aria-label="New Chat"
                       className="h-8 p-1 md:h-fit md:p-2"
                       onClick={() => {
                         setOpenMobile(false);

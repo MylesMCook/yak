@@ -20,7 +20,7 @@ function truncateAtSentence(text: string, maxLen: number): string {
 }
 
 /** Extract plain text from message parts (Message_v2 format) */
-function extractTextFromParts(parts: unknown): string {
+export function extractTextFromParts(parts: unknown): string {
   if (!Array.isArray(parts)) return String(parts ?? "");
   return parts
     .filter(

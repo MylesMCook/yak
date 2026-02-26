@@ -16,10 +16,10 @@ Prioritized list of work to make Yak a full-featured, production-ready web app. 
 
 | # | Title | Source | Area | Description |
 |---|--------|--------|------|-------------|
-| 2 | Invalid credentials — no user-visible error | probe | Auth | Wrong email/password leaves user on login with no toast or inline message. Differentiate credential failure from server error in login action; show "Invalid email or password" for credential failure. |
+| 2 | ~~Invalid credentials — no user-visible error~~ | probe | Auth | **RESOLVED** — login action returns `{ status: "failed" }` on CredentialsSignin; login page fires "Invalid credentials!" toast. |
 | 3 | Register disabled vs e2e expectations | probe | Auth | /register redirects to /login; no sign-up link. e2e tests are aligned. Optionally restore register and add "Sign up" link if product wants it. |
-| 4 | Icon-only buttons need aria-label | web-guidelines | Sidebar | app-sidebar.tsx: TrashIcon and PlusIcon (New Chat) buttons are icon-only; add aria-label (e.g. "Delete all chats", "New chat") for a11y when tooltip is not visible. |
-| 5 | Email input type | web-guidelines | Auth | components/auth-form.tsx:35 — use type="email" for the email field (currently type="text") for correct inputmode and validation. |
+| 4 | ~~Icon-only buttons need aria-label~~ | web-guidelines | Sidebar | **RESOLVED** — aria-labels added to all 4 icon-only buttons (Agent Tasks, Delete all chats, New Chat, Toggle Sidebar). |
+| 5 | ~~Email input type~~ | web-guidelines | Auth | **RESOLVED** — already `type="email"` in auth-form.tsx. |
 
 ---
 
@@ -30,7 +30,7 @@ Prioritized list of work to make Yak a full-featured, production-ready web app. 
 | 6 | Loading state copy | web-guidelines | Auth | components/submit-button.tsx:33 — use "Loading…" (ellipsis character) per guidelines for loading states. |
 | 7 | Navigation via pushState | web-guidelines | Chat | components/suggested-actions.tsx:39 — uses window.history.pushState + sendMessage; prefer &lt;Link&gt; or router for navigation so Cmd/Ctrl+click and middle-click work. |
 | 8 | Barrel imports (icons) | react-best-practices | Code quality | bundle-barrel-imports: Import icons directly from lucide-react (or source) instead of @/components/icons in app-sidebar.tsx, submit-button.tsx, artifacts/*/client.tsx, etc., to reduce bundle and improve tree-shaking. |
-| 9 | File uploads disabled | GO_FORWARD | Chat | /api/files/upload returns 501. Implement upload (e.g. Vercel Blob or local disk) and document env, or document as intentionally disabled. |
+| 9 | ~~File uploads disabled~~ | GO_FORWARD | Chat | **RESOLVED** — uploads work via Garage S3 (`@aws-sdk/client-s3`), 10MB limit. |
 | 10 | Empty login validation UX | probe (prior) | Auth | Optional: show inline or toast message for invalid_data (e.g. "Email and password are required") in addition to browser validation. |
 
 ---
@@ -53,13 +53,12 @@ Prioritized list of work to make Yak a full-featured, production-ready web app. 
 
 ## components/auth-form.tsx
 
-- components/auth-form.tsx:35 — email input type="text" → use type="email".
+- ~~components/auth-form.tsx:35 — email input type="text" → use type="email".~~ **RESOLVED**
 - components/auth-form.tsx:34 — placeholder "you@example.com" — optional: end with "…" for example pattern per guidelines.
 
 ## components/app-sidebar.tsx
 
-- components/app-sidebar.tsx:80–87 — icon-only button (TrashIcon) needs aria-label (e.g. "Delete all chats").
-- components/app-sidebar.tsx:96–100 — icon-only button (New Chat area) ensure aria-label if not text (e.g. "New chat").
+- ~~components/app-sidebar.tsx — icon-only buttons need aria-label.~~ **RESOLVED** — all 4 buttons have aria-labels.
 
 ## components/submit-button.tsx
 
@@ -88,8 +87,6 @@ Prioritized list of work to make Yak a full-featured, production-ready web app. 
 ## Summary
 
 - **Critical:** 1 (auth without AUTH_SECRET).
-- **High:** 4 (invalid credentials UX, register/e2e, icon aria-labels, email input type).
-- **Medium:** 5 (loading copy, suggested-actions nav, barrel imports, file uploads, empty validation UX).
+- **High:** 1 open (register/e2e), 3 resolved (invalid credentials, aria-labels, email input type).
+- **Medium:** 3 open (loading copy, suggested-actions nav, barrel imports), 1 resolved (file uploads), 1 optional (empty validation UX).
 - **Low:** 3 (placeholder pattern, mobile pass, chat send with proxy).
-
-Implement in order: Critical first, then High, then Medium. Low and skipped items (mobile, chat send verification) can follow or run in parallel.

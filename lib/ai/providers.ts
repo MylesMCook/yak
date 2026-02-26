@@ -75,8 +75,6 @@ export function getLanguageModel(modelId: string) {
       ? cliproxy.languageModel(cleanModelId)
       : groq.languageModel(cleanModelId);
 
-  console.log(`[provider] ${modelId} → ${provider}`);
-
   if (isReasoningModel) {
     return wrapLanguageModel({
       model: baseModel,
@@ -92,7 +90,6 @@ export function getTitleModel() {
     return myProvider.languageModel("title-model");
   }
   const titleModelId = process.env.TITLE_MODEL || "llama-3.3-70b-versatile";
-  console.log(`[provider] title → groq (${titleModelId})`);
   return groq.languageModel(titleModelId);
 }
 
@@ -101,7 +98,6 @@ export function getArtifactModel() {
     return myProvider.languageModel("artifact-model");
   }
   const artifactModelId = process.env.ARTIFACT_MODEL || "llama-3.3-70b-versatile";
-  console.log(`[provider] artifact → groq (${artifactModelId})`);
   return groq.languageModel(artifactModelId);
 }
 
